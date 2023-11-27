@@ -1,0 +1,393 @@
+<html style="background-color:black; color:white;  font-family:Trebuchet MS;" >
+<head>
+<title>Basic Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+</head>
+
+<style>
+
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.screen {
+    margin:auto;
+    margin-top: 1%;
+    resize: none;
+    height: 510px;
+    width: 710px;
+    display: grid;
+}
+
+.centered {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  width:50%;
+  margin:auto;
+  border-color: white;
+}  
+
+.absoluteposition {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+      
+.whiteonblack{
+    background-color:black;
+    color:white;
+}
+
+.blackonwhite{
+    background-color:white;
+    color:black;
+}
+
+div{
+    width:20px; 
+    height:100px;
+}
+
+
+</style>
+<body>
+
+<div class="centered" style="height:auto;">
+</div>
+<div class="centered" style="height:auto;">
+<!-- <h2 id="resetmessage" style="justify-content:center; margin-top:1%; color:white; visibility: hidden; font-size:16px">(You lost, resetting...)</h2> -->
+</div>
+<div class="screen" style="background-color:white; margin-top:3%" id="screen" >
+     <div style="background-color:red; transform:translate(50px, 100px)" class="absoluteposition" id="bar1"></div>
+     <div style="background-color:blue; transform:translate(640px, 100px)" class="absoluteposition" id="bar2"></div>
+     <div style="border-radius: 50%; width:20px; height:20px; background-color:black; transform:translate(200px, 100px)" class="absoluteposition" id="ball"></div>
+</div>
+<div class="centered" style="height:auto;">
+<h2 id="score" style="justify-content:center; margin-top:2%; color:white;">0  -  0</h2>
+
+<!-- <h2 id="highscore" style="justify-content:center; margin-top:1%; color:white;">High Score : -</h2> -->
+<input type="checkbox" id="randombounces" onclick="checkboxsend()">
+<label for="randombounces" id="randombounceslabel">Enable random bounces (P1 only)</label>
+<p id="randombouncesstatus"></p>
+
+</div>
+
+</body>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+
+var socket = io();
+
+var temp = 0
+var x1 = 0
+var y1 = 0
+
+var x2 = 0
+var y2 = 0
+
+
+var Up1 = false
+var Down1 = false
+
+var Up2 = false
+var Down2 = false
+
+var Score1 = 0
+var Score2 = 0
+var HighScore = 0
+
+var BallSpeedX = 13
+var BallSpeedY = 13
+var Ballx = 0
+var Bally = 0
+
+var id = 0
+
+function checkboxsend ()
+{
+    socket.emit('checkboxstatus', document.getElementById("randombounces").checked)
+}
+
+socket.on('number of users', (users) => {
+    if (id == 0)
+    {
+        id = users
+        console.log("Userid : " + id)
+        if (id == 2)
+        {
+            document.getElementById("randombounces").style.visibility = "hidden"
+            document.getElementById("randombounceslabel").style.visibility = "hidden"
+        }
+    }
+});
+
+socket.on('checkboxstatus', (status) => {
+    if (id == 2)
+    {
+        if (status == true)
+        {
+            document.getElementById("randombounceslabel").style.visibility = "visible"
+            document.getElementById("randombounceslabel").innerHTML = "Player 1 has enabled random bounces"
+        }  
+        else
+        {
+            document.getElementById("randombounceslabel").style.visibility = "hidden"
+        }
+    }
+});
+
+socket.on('bar1 pos', (x1, y1) => {
+    
+    if (id == 2)
+    {
+        document.getElementById("bar1").style.transform = "translate(" + x1 + "px, " + y1 + "px)"
+    }
+
+});
+socket.on('bar2 pos', (x2, y2) => {
+
+    if (id == 1)
+    {
+        document.getElementById("bar2").style.transform = "translate(" + x2 + "px, " + y2 + "px)"
+    }
+
+});
+socket.on('ball pos', (Ballx, Bally) => {
+    
+    if (id == 2)
+    {
+        document.getElementById("ball").style.transform = "translate(" + Ballx + "px, " + Bally + "px)"
+    }
+
+});
+
+
+socket.on('ball speed', (SpeedX, SpeedY) => {
+    BallSpeedX = SpeedX
+    BallSpeedY = SpeedY
+});
+
+socket.on('score increased', (score1, score2) => {
+    Score1 = score1
+    Score2 = score2
+
+    document.getElementById("score").innerHTML = (Score1 + "  -  " + Score2)
+});
+
+
+var input = setInterval(Move, 10)
+
+window.addEventListener("keydown", function(e) {
+    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+        e.preventDefault();
+    }
+}, false);
+
+window.addEventListener("keydown", function(event) {
+
+    if (event.code == "KeyW")
+    {
+        Up1 = true
+    }
+
+    if (event.code == "KeyS")
+    {
+        Down1 = true
+    }
+
+    if (event.code == "ArrowUp")
+    {
+        Up2 = true
+    }
+
+    if (event.code == "ArrowDown")
+    {
+        Down2 = true
+    }
+});
+
+window.addEventListener("keyup", function(event) {
+  if (event.code == "KeyW")
+    {
+        Up1 = false
+    }
+
+    if (event.code == "KeyS")
+    {
+        Down1 = false
+    }
+
+    if (event.code == "ArrowUp")
+    {
+        Up2 = false
+    }
+
+    if (event.code == "ArrowDown")
+    {
+        Down2 = false
+    }
+});
+
+function Move ()
+{
+    if(id <= 2)
+    {
+        if (id == 1)
+        {
+            x1 = parseInt((document.getElementById("bar1").style.transform).match(/\d+(\.\d+)?/g)[0])
+            y1 = parseInt((document.getElementById("bar1").style.transform).match(/\d+(\.\d+)?/g)[1])
+           
+            if(Up1)
+            {
+                y1=y1-Math.abs(BallSpeedX)*1.4 / 5
+            }
+
+            if(Down1)
+            {
+                if (y1 < 420)
+                {
+                    y1=y1+Math.abs(BallSpeedX)*1.4 / 5
+                }
+            }
+            document.getElementById("bar1").style.transform = "translate(" + x1 + "px, " + y1 + "px)"
+        }
+        else if (id == 2)
+        {
+            x2 = parseInt((document.getElementById("bar2").style.transform).match(/\d+(\.\d+)?/g)[0])
+            y2 = parseInt((document.getElementById("bar2").style.transform).match(/\d+(\.\d+)?/g)[1])
+           
+            if(Up2)
+            {
+                y2=y2-Math.abs(BallSpeedX)*1.4 / 5
+            }
+
+            if(Down2)
+            {
+                if (y2 < 420)
+                {
+                    y2=y2+Math.abs(BallSpeedX)*1.4 / 5
+                }
+            }
+            document.getElementById("bar2").style.transform = "translate(" + x2 + "px, " + y2 + "px)"
+        }    
+
+        if (id == 1)
+        {
+            Ballx = parseInt((document.getElementById("ball").style.transform).match(/\d+(\.\d+)?/g)[0])
+            Bally = parseInt((document.getElementById("ball").style.transform).match(/\d+(\.\d+)?/g)[1])
+            
+            x1 = parseInt((document.getElementById("bar1").style.transform).match(/\d+(\.\d+)?/g)[0])
+            y1 = parseInt((document.getElementById("bar1").style.transform).match(/\d+(\.\d+)?/g)[1])
+            x2 = parseInt((document.getElementById("bar2").style.transform).match(/\d+(\.\d+)?/g)[0])
+            y2 = parseInt((document.getElementById("bar2").style.transform).match(/\d+(\.\d+)?/g)[1])
+
+
+
+            if (Ballx <= x1+20 && Bally >= y1 && Bally <= y1 + 100 && BallSpeedX < 0)
+            {
+                BallSpeedX = -1 * BallSpeedX
+                Ballx = x1 + 20
+                if (document.getElementById("randombounces").checked)
+                {
+                    BallSpeedY = (Math.random()-0.5)*BallSpeedX*3
+                    if (BallSpeedY > 120)
+                    {
+                        BallSpeedY = 120
+                    }
+                }
+            }
+            else if (Ballx >= x2-20 && Bally >= y2 && Bally <= y2 + 100 && BallSpeedX > 0)
+            {
+                BallSpeedX = -1 * BallSpeedX
+                Ballx = x2 - 20
+                if (document.getElementById("randombounces").checked)
+                {
+                    BallSpeedY = (Math.random()-0.5)*BallSpeedX*3
+                    if (BallSpeedY > 120)
+                    {
+                        BallSpeedY = 120
+                    }
+                }
+            }
+            else if (Ballx < 10)
+            {
+                BallSpeedX = 13
+                BallSpeedY = -13
+                Ballx = x1 + 25 
+
+                Score2++
+                socket.emit('score increased', Score1, Score2)
+            }
+
+            else if (Ballx > 700)
+            {
+                BallSpeedX = -13
+                BallSpeedY = 13
+                Ballx = x2 - 25 
+
+                Score1++
+                socket.emit('score increased', Score1, Score2)
+            }
+
+
+            if (Bally > 500 && BallSpeedY > 0)
+            {
+                BallSpeedY = -1 * BallSpeedY
+                Bally = 500
+            }
+            else if (Bally < 10 && BallSpeedY < 0)
+            {
+                BallSpeedY = -1 * BallSpeedY
+                Bally = 10
+            }
+            else if (Bally == temp)
+            {
+                BallSpeedY = -1 * BallSpeedY
+            }
+            temp == Bally
+
+            
+            if (BallSpeedX < 0)
+            {
+                BallSpeedX = BallSpeedX - 0.002 
+            }
+            else
+            {
+                BallSpeedX = BallSpeedX + 0.002
+            }
+            
+            Ballx = Ballx + BallSpeedX / 5
+            Bally = Bally + BallSpeedY / 5
+
+            
+            document.getElementById("ball").style.transform = "translate(" + Ballx + "px, " + Bally + "px)"
+            
+        }
+        if (id == 1)
+        {
+            socket.emit('bar1 pos', x1, y1)
+            socket.emit('ball pos', Ballx, Bally)
+        }
+        else if (id == 2)
+        {
+            socket.emit('bar2 pos', x2, y2)
+        }
+
+        socket.emit('ball speed', BallSpeedX, BallSpeedY)
+    }
+}
+
+
+
+
+</script>
+
+</html>
+
